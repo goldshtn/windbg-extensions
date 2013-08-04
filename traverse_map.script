@@ -1,0 +1,56 @@
+.if ($sicmp("${$arg1}", "-n") == 0) {
+	.if (@@(@$t0->_Isnil) == 0) {
+		.if (@$t2 == 1) {
+			.printf /D "<exec cmd=\"db %p L10\">%p</exec>\n", @$t0, @$t0
+			.printf "key = "
+			?? @$t0->_Myval.first
+			.printf "value = "
+			?? @$t0->_Myval.second
+		} .else {
+			r? $t9 = @$t0->_Myval
+			command
+		}
+	}
+
+	$$ This statement is here for debugging purposes
+	$$ .printf "root = %p, node = %p, left = %p, right = %p\n", @$t1, @$t0, @@(@$t0->_Left), @@(@$t0->_Right)
+
+	$$ Recurse into _Left, _Right unless they point to the root of the tree.
+	$$ Note that we need to store the register state (t0 etc.), because otherwise the "recursive"
+	$$ invocation is going to clobber them for us. Luckily we have commands to push/pop state.
+	.if (@@(@$t0->_Left) != @@(@$t1)) {
+		.push /r /q
+		r? $t0 = @$t0->_Left
+		$$>a< ${$arg0} -n
+		.pop /r /q
+	}
+	.if (@@(@$t0->_Right) != @@(@$t1)) {
+		.push /r /q
+		r? $t0 = @$t0->_Right
+		$$>a< ${$arg0} -n
+		.pop /r /q
+	}
+} .else {
+	r? $t0 = ${$arg1}
+
+	.if (${/d:$arg2}) {
+		.if ($sicmp("${$arg2}", "-c") == 0) {
+			r $t2 = 0
+			aS ${/v:command} "${$arg3}"
+		}
+	} .else {
+		r $t2 = 1
+		aS ${/v:command} " "
+	}
+
+	.printf "size = %d\n", @@(@$t0._Mysize)
+	
+	$$ t0 now will contain the root of the tree but will be changed by subsequent invocations
+	$$ t1 on the other hand will contain the head node (always), this is our stop condition
+	r? $t0 = @$t0._Myhead->_Parent
+	r? $t1 = @$t0->_Parent
+
+	$$>a< ${$arg0} -n
+
+	ad command
+}

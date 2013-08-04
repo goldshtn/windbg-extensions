@@ -1,0 +1,60 @@
+windbg ANSI Command Tree 1.0
+title {"Common Commands"}
+body
+{"Common Commands"}
+ {"Information"}
+  {"Open help"} {".hh"}
+  {"Time of dump"} {".time"}
+  {"Process being debugged"} {"|"}
+  {"Dump location"} {"||"}
+  {"Process Environment Block"} {"!peb"}
+  {"Last event"} {".lastevent"}
+ {"Logging"}
+  {"Open log"} {".logopen /t /u /d"}
+  {"Close log"} {".logclose"}
+ {"Modules"}
+  {"All modules"} {"lm D sm"}
+  {"Loaded modules"} {"lmo D sm"}
+  {"Loaded modules (verbose)"} {"lmvo D sm"}
+  {"Modules w/o symbols"} {"lme D sm"}
+  {"Show verbose symbol loading info"} {"!sym noisy; .reload"}
+  {"Set symbol path"} {".sympath srv*C:\symbols*http://msdl.microsoft.com/download/symbols"}
+ {"Stacks"}
+  {"Set frame length to 2000"} {".kframes 2000"}
+  {"Dump current stack w/ DML"} {"kpM 1000"}
+  {"Dump stacks with all parameters"} {"kPn 1000"}
+  {"Dump stacks with FPO"} {"kvn 1000"}
+  {"Dump all thread stacks"} {"~*kbn 1000"}
+  {"Dump unique stacks"} {"!uniqstack -pn"}
+  {"Thread environment block"} {"!teb"}
+  {"Move to next frame"} {".f+"}
+  {"Move to previous frame"} {".f-"}
+  {"Show local variables"} {"dv /v /t"}
+ {"Memory"}
+  {"Dump heaps"} {"!heap -a"}
+  {"Dump heap statistics"} {"!heap -s 0"}
+  {"Dump all heap blocks"} {"!heap -h 0"}
+ {"Resources"}
+  {"Dump all handles (basic information)"} {"!handle"}
+  {"Enable handle tracing"} {"!htrace -enable"}
+  {"Obtain and diff handle tracing snapshot"} {"!htrace -diff"}
+ {"Automated Tasks"}
+  {"!analyze"} {"!analyze -v"}
+  {"CPU time for User and Kernel Mode"} {"!runaway 7"}
+ {"Kernel"}
+  {"Kernel hang analysis"} {"!analyze -hang"}
+  {"Display all processes"} {"!process 0 0"}
+  {"Current thread"} {"!thread"}
+  {"Find all IRPs (slow)"} {"!irpfind"}
+  {"Pool usage statistics (sorted by size)"} {"!poolused 4"}
+  {"Locks information"} {"!locks"}
+  {"Queued spinlocks"} {"!qlocks"}
+ {"Managed"}
+  {"Load SOS 4.0"} {".loadby sos clr"}
+  {"Load SOS 2.0"} {".loadby sos mscorwks"}
+  {"Managed stack"} {"!clrstack"}
+  {"Threads"} {"!threads"}
+  {"Stack objects"} {"!dso"}
+  {"Sync blocks"} {"!syncblk"}
+  {"Managed heap statistics"} {"!dumpheap -stat"}
+  {"Print current exception"} {"!PrintException"}

@@ -29,3 +29,42 @@ Usage:
 ```
 
 Prior to using this script, you must install [PyKD](http://pykd.codeplex.com/).
+
+traverse_map.script
+===================
+
+A WinDbg script that traverses std::map objects.
+
+Usage:
+
+```$$>a< traverse_map.script <map variable> [-c "cmd"]```
+
+where ```cmd``` can reference @$t9, e.g. ```"?? @$t9.second"``` (this is the pair held by the map) and can also reference @$t0, which is the actual tree node pointer.
+
+Examples:
+
+```
+$$>a< traverse_map.script my_map -c ".block { .echo ----; ?? @$t9.first; ?? @$t9.second; }"
+$$>a< traverse_map.script m -c ".block { .if (@@(@$t9.first) == 8) { .echo ----; ?? @$t9.second } }"
+$$>a< traverse_map.script my_map
+```
+
+traverse_vector.script
+======================
+
+A WinDbg script that traverses std::vector objects.
+
+Usage:
+
+```$$>a< traverse_vector.script <vector variable> ["cmd"]```
+
+where ```cmd``` can reference @$t0, which always points to the current vector element.
+
+cmdtree.txt
+===========
+
+A command tree for WinDbg with a collection of handy user-mode and kernel-mode commands, including extensions from SOS for .NET applications.
+
+Usage:
+
+```.cmdtree cmdtree.txt```
