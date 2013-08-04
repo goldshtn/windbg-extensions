@@ -28,4 +28,4 @@ Usage:
 !py heap_stat.py -stat -load dbginfo.sav
 ```
 
-Prior to using this script, you must install (PyKD)[http://pykd.codeplex.com/].
+Prior to using this script, you must install [PyKD](http://pykd.codeplex.com/).
