@@ -108,11 +108,11 @@ __declspec(dllexport) DECLARE_API (wct_thread)
 	if (strlen(args) > 0)
 	{
 		haveArgument = TRUE;
-		threadID = atoi(args);
+		threadID = (DWORD)GetExpression(args);
 		hThread = OpenThread(THREAD_QUERY_LIMITED_INFORMATION, FALSE, threadID);
 		if (hThread == NULL)
 		{
-			dprintf("Error opening thread %d: 0x%x\n", threadID, GetLastError());
+			dprintf("Error opening thread %x: 0x%x\n", threadID, GetLastError());
 			goto Cleanup;
 		}
 	}
@@ -124,12 +124,12 @@ __declspec(dllexport) DECLARE_API (wct_thread)
 	}
 	if (FALSE == GetExitCodeThread(hThread, &exitCode))
 	{
-		dprintf("Error retrieving exit code for thread %d: 0x%x\n", threadID, GetLastError());
+		dprintf("Error retrieving exit code for thread %x: 0x%x\n", threadID, GetLastError());
 		goto Cleanup;
 	}
 	if (exitCode != STILL_ACTIVE)
 	{
-		dprintf("Thread %d is no longer running\n", threadID);
+		dprintf("Thread %x is no longer running\n", threadID);
 		goto Cleanup;
 	}
 
@@ -138,7 +138,7 @@ __declspec(dllexport) DECLARE_API (wct_thread)
 	hwct = OpenThreadWaitChainSession(0, NULL);
 	if (hwct == NULL)
 	{
-		dprintf("Error retrieving wait chain for thread %d: 0x%x\n", threadID, GetLastError());
+		dprintf("Error retrieving wait chain for thread %x: 0x%x\n", threadID, GetLastError());
 		goto Cleanup;
 	}
 
@@ -151,18 +151,18 @@ __declspec(dllexport) DECLARE_API (wct_thread)
 		chain,
 		&isCycle))
 	{
-		dprintf("Error retrieving wait chain for thread %d: 0x%x\n", threadID, GetLastError());
+		dprintf("Error retrieving wait chain for thread %x: 0x%x\n", threadID, GetLastError());
 		goto Cleanup;
 	}
 
-	dprintf(">>> Begin wait chain for thread %d:%d with %d nodes\n", processID, threadID, nodeCount);
+	dprintf(">>> Begin wait chain for thread %x:%x with %d nodes\n", processID, threadID, nodeCount);
 	for (i = 0; i < nodeCount; ++i)
 	{
 		WAITCHAIN_NODE_INFO* curr = &chain[i];
 		switch (curr->ObjectType)
 		{
 		case WctThreadType:
-			dprintf("    Thread [%d:%d:%s WT=%d]",
+			dprintf("    Thread [%x:%x:%s WT=%x]",
 				curr->ThreadObject.ProcessId,
 				curr->ThreadObject.ThreadId,
 				curr->ObjectStatus == WctStatusBlocked ? "blocked" : "running",
@@ -204,7 +204,7 @@ __declspec(dllexport) DECLARE_API (wct_thread)
 	{
 		dprintf("DEADLOCK FOUND\n");
 	}
-	dprintf(">>> End wait chain for thread %d:%d\n", processID, threadID);
+	dprintf(">>> End wait chain for thread %x:%x\n", processID, threadID);
 
 Cleanup:
 	if (hwct != NULL)
@@ -227,11 +227,11 @@ __declspec(dllexport) DECLARE_API (wct_proc)
 	if (strlen(args) > 0)
 	{
 		haveArgument = TRUE;
-		processID = atoi(args);
+		processID = (DWORD)GetExpression(args);
 		hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, processID);
 		if (hProcess == NULL)
 		{
-			dprintf("Error opening process %d: 0x%x\n", processID, GetLastError());
+			dprintf("Error opening process %x: 0x%x\n", processID, GetLastError());
 			goto Cleanup;
 		}
 	}
@@ -245,17 +245,17 @@ __declspec(dllexport) DECLARE_API (wct_proc)
 	exePathSize = ARRAYSIZE(exePath);
 	if (TRUE == QueryFullProcessImageName(hProcess, 0, exePath, &exePathSize))
 	{
-		dprintf("*** Begin thread wait chain information for process %S [%d]\n", exePath, processID);
+		dprintf("*** Begin thread wait chain information for process %S [%x]\n", exePath, processID);
 	}
 	else
 	{
-		dprintf("*** Begin thread wait chain information for process %d\n", processID);
+		dprintf("*** Begin thread wait chain information for process %x\n", processID);
 	}
 
 	snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, processID);
 	if (snapshot == NULL)
 	{
-		dprintf("Error enumerating threads in process %d: 0x%x\n", processID, GetLastError());
+		dprintf("Error enumerating threads in process %x: 0x%x\n", processID, GetLastError());
 		goto Cleanup;
 	}
 	thread.dwSize = sizeof(thread);
@@ -266,13 +266,13 @@ __declspec(dllexport) DECLARE_API (wct_proc)
 			if (thread.th32OwnerProcessID != processID)
 				continue;
 
-			_itoa_s(thread.th32ThreadID, threadArgs, ARRAYSIZE(threadArgs), 10);
+			_itoa_s(thread.th32ThreadID, threadArgs, ARRAYSIZE(threadArgs), 16);
 			wct_thread(hProcess, NULL, 0, 0, threadArgs);
 		}
 		while (Thread32Next(snapshot, &thread));
 	}
 
-	dprintf("*** End thread wait chain information for process %d\n", processID);
+	dprintf("*** End thread wait chain information for process %x\n", processID);
 
 Cleanup:
 	if (TRUE == haveArgument)
@@ -296,7 +296,7 @@ __declspec(dllexport) DECLARE_API (wct)
 
 	for (i = 0; i < bytesReturned / sizeof(DWORD); ++i)
 	{
-		_itoa_s(processes[i], procArgs, ARRAYSIZE(procArgs), 10);
+		_itoa_s(processes[i], procArgs, ARRAYSIZE(procArgs), 16);
 		wct_proc(NULL, NULL, 0, 0, procArgs);
 	}
 

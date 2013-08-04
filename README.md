@@ -7,10 +7,8 @@ Usage:
 
 ```
 .load wct_x86.dll
-!wct_thread 1144
+!wct_thread 1fa4
 ```
-
-Note that the extension takes decimal values (10-based) for process and thread IDs. I intend to fix this at some point so that arbitrary expressions can be provided, like with most other WinDbg commands.
 
 heap_stat.py
 ============
