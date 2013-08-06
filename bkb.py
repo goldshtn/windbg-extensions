@@ -105,10 +105,17 @@ if not is64Bit:
 	# Case 1: EBP is OK, ESP (and possibly EIP) is broken
 	# Resolution: Set ESP to what EBP is pointing to
 	if bpOk and not spOk:
-		# EBP+4 is where the return address resides
-		ip = ptrPtr(bp+4)
-		sp = ptrPtr(bp)
 		dprintln("<u>Candidate call stack</u>:", True)
+		if ipOk:
+			# This represents the situation when the function was entered
+			# and not at the current instruction pointer, but it means we're
+			# not forced to miss a frame.
+			sp = bp
+			dprintln("<i>Warning: ESP represents the value at function entry time.</i>", True)
+		else:
+			# EBP+4 is where the return address resides
+			ip = ptrPtr(bp+4)
+			sp = ptrPtr(bp)
 		if not resetRegisters:
 			if rawBpWalk:
 				dprintln(stackFromRawBpWalk(bp, sp, ip))
@@ -133,8 +140,13 @@ if not is64Bit:
 			sym = findSymbol(ptrPtr(sp))
 			potentialBp = ptrPtr(sp-4)
 			if isValid(potentialBp) and ('!' in sym or '+' in sym) and inStackLimits(potentialBp):
-				potentialIp = ptrPtr(sp)
-				potentialSp = ptrPtr(potentialBp)
+				if spOk and ipOk:
+					potentialIp = ip
+					potentialSp = sp-4
+					potentialBp = sp-4
+				else:
+					potentialIp = ptrPtr(sp)
+					potentialSp = ptrPtr(potentialBp)
 				if rawBpWalk:
 					kbOutput = stackFromRawBpWalk(potentialBp, sp, potentialIp)
 				else:
