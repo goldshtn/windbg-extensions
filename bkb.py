@@ -1,25 +1,12 @@
 from pykd import *
 import sys
 
+dprintln("")
+
 force = "-force" in sys.argv
 resetRegisters = "-reset" in sys.argv
-
-teb = dbgCommand("!teb").split('\n')
-if len(teb) < 4:
-	dprintln("Error reading TEB -- you might be looking at a minidump")
-	exit(1)
-
-stackBase = long(teb[2].split()[1], 16)
-stackLimit = long(teb[3].split()[1], 16)
-
-dprintln("<u>Initial analysis</u>:", True)
-dprintln("")
-dprintln("<b>StackBase</b>  = %16x" % stackBase, True)
-dprintln("<b>StackLimit</b> = %16x" % stackLimit, True)
-dprintln("")
-
-def inStackLimits(p):
-	return p <= stackBase and p > stackLimit
+ignoreMissingTeb = "-ignoremissingteb" in sys.argv
+rawBpWalk = "-rawbpwalk" in sys.argv
 
 is64Bit = False
 SP_REG = "esp"
@@ -33,12 +20,45 @@ if getProcessorMode() == "X64":
 	IP_REG = "rip"
 	PTR_SIZE = 8
 
+if rawBpWalk and is64Bit:
+	dprintln("Raw BP walk is not compatible with x64")
+	exit(1)
+if rawBpWalk and resetRegisters:
+	dprintln("Raw BP walk is not compatible with -reset")
+	exit(1)
+
+stackBase = 0
+stackLimit = 0
+missingTeb = False
+
+teb = dbgCommand("!teb").split('\n')
+if len(teb) < 4:
+	missingTeb = True
+	if not ignoreMissingTeb:
+		dprintln("Error reading TEB -- you might be looking at a minidump")
+		exit(1)
+else:
+	stackBase = long(teb[2].split()[1], 16)
+	stackLimit = long(teb[3].split()[1], 16)
+
+dprintln("<u>Initial analysis</u>:", True)
+dprintln("")
+if not missingTeb:
+	dprintln("<b>StackBase</b>  = %16x" % stackBase, True)
+	dprintln("<b>StackLimit</b> = %16x" % stackLimit, True)
+	dprintln("")
+else:
+	dprintln("<b>TEB is missing</b>", True)
+
+def inStackLimits(p):
+	return missingTeb or (p <= stackBase and p > stackLimit)
+
 sp = reg(SP_REG)
 bp = reg(BP_REG)
 ip = reg(IP_REG)
 
-spOk = inStackLimits(sp)
-bpOk = is64Bit or inStackLimits(bp)
+spOk = isValid(sp) and inStackLimits(sp)
+bpOk = is64Bit or (isValid(bp) and inStackLimits(bp))
 
 ipOk = isValid(ip)
 if ipOk:
@@ -56,10 +76,30 @@ if spOk and bpOk and ipOk and not force:
 	dprintln("If you force reconstruction, we will look for anything within stack limits.")
 	exit(2)
 
+if not spOk and not bpOk and missingTeb:
+	dprintln("The TEB is missing and both SP and BP are corrupted. Analysis is not possible.")
+	exit(3)
+
 # Temporary hack because we need a specific output format
 dmlWasOn = "on by default" in dbgCommand(".prefer_dml")
 if dmlWasOn:
 	dbgCommand(".prefer_dml 0")
+
+def stackFromRawBpWalk(bp, sp, ip):
+	result = "ChildEBP RetAddr  Args to Child              \n"
+	while isValid(bp):
+		sym = findSymbol(ip)
+		src = ()
+		try:
+			src = getSourceLine(ip)
+		except:
+			srcText = ""
+		if len(src) > 0:
+			srcText = " [%s @ %d]" % (src[0], src[1])
+		result += "%08x %08x %08x %08x %08x %s%s\n" % (bp, ptrPtr(bp+4), ptrDWord(bp+8), ptrDWord(bp+12), ptrDWord(bp+16), sym, srcText)
+		ip = ptrPtr(bp+4)
+		bp = ptrPtr(bp)
+	return result
 
 if not is64Bit:
 	# Case 1: EBP is OK, ESP (and possibly EIP) is broken
@@ -70,7 +110,10 @@ if not is64Bit:
 		sp = ptrPtr(bp)
 		dprintln("<u>Candidate call stack</u>:", True)
 		if not resetRegisters:
-			dprintln(dbgCommand("kb = ebp %08x %08x" % (sp, ip)))
+			if rawBpWalk:
+				dprintln(stackFromRawBpWalk(bp, sp, ip))
+			else:
+				dprintln(dbgCommand("kb = ebp %08x %08x" % (sp, ip)))
 			dprintln('<exec cmd="r esp=%08x; r eip=%08x">Set ESP=%08x, EIP=%08x</exec>\n' % (sp, ip, sp, ip), True)
 		else:
 			dbgCommand("r esp = %08x" % sp)
@@ -83,14 +126,19 @@ if not is64Bit:
 	if force or not bpOk:
 		if force or not spOk:
 			sp = stackLimit+4
+		if missingTeb:
+			stackBase = sp+1024
 		candidateStacks = []
 		while sp < stackBase:
 			sym = findSymbol(ptrPtr(sp))
 			potentialBp = ptrPtr(sp-4)
-			if ('!' in sym or '+' in sym) and inStackLimits(potentialBp):
+			if isValid(potentialBp) and ('!' in sym or '+' in sym) and inStackLimits(potentialBp):
 				potentialIp = ptrPtr(sp)
 				potentialSp = ptrPtr(potentialBp)
-				kbOutput = dbgCommand("kb = %08x %08x %08x" % (potentialBp, sp, potentialIp))
+				if rawBpWalk:
+					kbOutput = stackFromRawBpWalk(potentialBp, sp, potentialIp)
+				else:
+					kbOutput = dbgCommand("kb = %08x %08x %08x" % (potentialBp, sp, potentialIp))
 				kbOutputLines = kbOutput.split('\n')
 				cleanKbOutput = "\n".join(kbOutputLines[1:])
 				if not any(cleanKbOutput in stack for stack in candidateStacks) and "RtlUserThreadStart" in kbOutputLines[-2]:
@@ -117,6 +165,8 @@ else:
 	# only RIP was overwritten so it's going to be the first thing we see.
 	if not spOk:
 		sp = stackLimit+8
+	if missingTeb:
+		stackBase = sp+1024
 	candidateStacks = []
 	while sp < stackBase:
 		sym = findSymbol(ptrPtr(sp))

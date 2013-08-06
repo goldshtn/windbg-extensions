@@ -28,6 +28,28 @@ Usage:
 
 Prior to using this script, you must install [PyKD](http://pykd.codeplex.com/).
 
+bkb.py
+======
+
+A PyKD script that reconstructs broken call stacks (or dies while trying). This initial version attempts to determine which registers are broken -- stack pointer, base pointer, instruction pointer -- and performs reconstruction accordingly. If all the registers are corrupted, the script attempts to inspect the raw stack using StackLimit and StackBase information from the TEB.
+
+Usage:
+
+```
+!py bkb
+!py bkb -reset
+!py bkb -ignoremissingteb
+!py bkb -rawbpwalk
+```
+
+The ```-reset``` switch will also set the SP/BP/IP values to the reconstructed results, so that you can continue your analysis with other WinDbg commands.
+
+The ```-ignoremissingteb``` switch will let the script run even if it can't obtain the StackLimit and StackBase values from the TEB (e.g., in certain types of minidumps). If this switch is used, the script requires that one of SP/BP is valid, because there is no way to determine where the thread's stack lies otherwise.
+
+The ```-rawbpwalk``` switch instructs the script to rely on manual stack-walking (EBP chain) instead of using the ```kb``` command in the debugger. There have been some situations where manual stack-walking succeeds where ```kb``` fails. This option is incompatible with x64.
+
+Prior to using this script, you must install [PyKD](http://pykd.codeplex.com/).
+
 traverse_map.script
 ===================
 
