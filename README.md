@@ -1,3 +1,53 @@
+tracer
+======
+
+A WinDbg extension that supports open/close tracing for arbitrary objects. For example, it can be used to find memory leaks (memory that is allocated and not freed), socket leaks, and other kinds of unbalanced resources.
+
+To use the extension, you need to place calls to the ```!traceopen``` and ```!traceclose``` commands in strategic locations. Most commonly you would do it using breakpoints. For example, you can trace heap allocation/free operations using the following two breakpoints:
+
+```
+.load tracer_x86.dll
+bp ntdll!RtlAllocateHeap "r $t0 = poi(@esp+0n12); gu; !traceopen @eax @$t0; gc"
+bp ntdll!RtlFreeHeap "!traceclose poi(@esp+0n12); gc"
+```
+
+The first breakpoint saves the allocation size, waits for RtlAllocateHeap to return, and then calls ```!traceopen``` with the allocated buffer as the first parameter and the size (weight) as the second parameter. The second breakpoint calls ```!traceclose``` with the address of the buffer being deallocated. As a result, the extension maintains statistics on all heap allocations that have not yet been freed, and allocation call stacks for each allocation.
+
+The ```!traceclose -keepstack <object>``` command will keep the object and its call stacks in the internal cache even if the open-close delta is 0, i.e. the object has been freed/closed. This can be useful for certain tracing scenarios.
+
+To perform analysis, you use the ```!tracedisplay <object>``` command. You give it an object and it displays call stacks for operations on that object. Alternatively, you can use the ```!tracedisplay -stats``` switch to see which call stacks are responsible for a large amount of outstanding objects. The output is sorted by weight in descending order:
+
+```
+0:000> !tracedisplay -stats
+Total objects with events		: 0n1975
+Total events with stack traces	: 0n3452
+
+----- STACK #1 OPEN=0n14 CLOSE=0n0 OTHER=0n0 WEIGHT=0n3784592 -----
+	ntdll!RtlpAllocateUserBlockFromHeap+0x4c
+	ntdll!RtlpAllocateUserBlock+0xcc
+	ntdll!RtlpLowFragHeapAllocFromContext+0x870
+	ntdll!RtlAllocateHeap+0x115
+	MSVCR100!malloc+0x4b
+	mfc100u!operator new+0x33
+	BatteryMeter!TemperatureAndBatteryUpdaterThread+0x3c
+	KERNEL32!BaseThreadInitThunk+0xe
+	ntdll!__RtlUserThreadStart+0x72
+	ntdll!_RtlUserThreadStart+0x1b
+
+----- STACK #2 OPEN=0n767 CLOSE=0n0 OTHER=0n0 WEIGHT=0n3497520 -----
+	MSVCR100!malloc+0x4b
+	mfc100u!operator new+0x33
+	BatteryMeter!TemperatureAndBatteryUpdaterThread+0x3c
+	KERNEL32!BaseThreadInitThunk+0xe
+	ntdll!__RtlUserThreadStart+0x72
+	ntdll!_RtlUserThreadStart+0x1b
+
+----- STACK #3 OPEN=0n769 CLOSE=0n0 OTHER=0n0 WEIGHT=0n2362368 -----
+... snipped ...
+```
+
+Finally, the ```!traceoperation <name> <object>``` command supports additional operations other than open/close that you might want to trace, and the ```!traceclear``` commands clears the internal call stack cache maintained by the extension.
+
 WCT
 ===
 
