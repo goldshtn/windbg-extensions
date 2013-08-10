@@ -30,10 +30,13 @@ BRIDGE_LINKAGE void DisplayStacksForObject(ULONG64 object, BOOL outstanding)
 	const auto& events = g_events.Get(object);
 	if (outstanding)
 	{
-		auto count = std::count_if(events.begin(), events.end(), [](const EventStack& event) {
-			return event.EventOperation == EventOperationClose;
-		});
-		if (count > 0)
+		size_t countOpen = 0, countClose = 0;
+		for (const auto& event : events)
+		{
+			if (event.EventOperation == EventOperationOpen) countOpen++;
+			if (event.EventOperation == EventOperationClose) countClose++;
+		}
+		if (countOpen - countClose <= 0)
 			return; //This object has been closed already
 	}
 

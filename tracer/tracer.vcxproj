@@ -127,7 +127,7 @@
       </ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y $(TargetPath) $(SolutionDir)tracer_x86.dll</Command>
+      <Command>copy /Y $(TargetPath) $(SolutionDir)..\tracer_x86.dll</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -149,7 +149,7 @@
       </ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y $(TargetPath) $(SolutionDir)tracer_x64.dll</Command>
+      <Command>copy /Y $(TargetPath) $(SolutionDir)..\tracer_x64.dll</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
