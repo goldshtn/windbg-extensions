@@ -11,11 +11,8 @@ stats_only = False
 save_info = False
 short_output = False
 
-pointer_size = 4
-pointer_format = "%08x"
-if getProcessorMode() == "X64":
-	pointer_size = 8
-	pointer_format = "%016x"
+pointer_size = ptrSize()
+pointer_format = "%016x" if pointer_size == 8 else "%08x"
 
 if '-stat' in sys.argv:
 	stats_only = True
